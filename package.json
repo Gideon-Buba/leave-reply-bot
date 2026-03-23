@@ -1,0 +1,23 @@
+{
+  "name": "leave-reply-bot",
+  "version": "1.0.0",
+  "description": "Outlook leave email automation with Telegram approval",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "groq-sdk": "^0.9.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "playwright": "^1.42.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
