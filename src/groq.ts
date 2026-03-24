@@ -11,20 +11,16 @@ Your replies should:
 - Address the sender by name if available
 - Be brief (3-5 sentences max)
 - Reference the specific leave type/dates mentioned if clear
-- End with a standard sign-off: "Regards,\nLeave Services Unit"
+- End with a standard sign-off: "Regards,\nGideon Buba,\nOII, Leave Unit"
 
 You will be given the email content and the type of response needed.
 Return ONLY the email reply body — no subject line, no extra commentary.`;
 
-export type ReplyType =
-  | "approved"
-  | "denied"
-  | "more_info"
-  | "acknowledgement";
+export type ReplyType = "approved" | "denied" | "more_info" | "acknowledgement";
 
 export async function draftReply(
   email: Email,
-  replyType: ReplyType
+  replyType: ReplyType,
 ): Promise<string> {
   const replyInstructions: Record<ReplyType, string> = {
     approved:

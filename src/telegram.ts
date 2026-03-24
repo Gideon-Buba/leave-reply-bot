@@ -38,7 +38,7 @@ export class TelegramApproval {
       if (!this.pendingApproval) {
         await this.bot.sendMessage(
           this.chatId,
-          "No pending email approvals right now."
+          "No pending email approvals right now.",
         );
         return;
       }
@@ -53,7 +53,7 @@ export class TelegramApproval {
         if (!newText) {
           await this.bot.sendMessage(
             this.chatId,
-            "⚠️ Please provide the new reply text after /edit"
+            "⚠️ Please provide the new reply text after /edit",
           );
           return;
         }
@@ -79,13 +79,13 @@ export class TelegramApproval {
         } else {
           await this.bot.sendMessage(
             this.chatId,
-            `⚠️ Valid types: approved, denied, more_info, acknowledgement`
+            `⚠️ Valid types: approved, denied, more_info, acknowledgement`,
           );
         }
       } else {
         await this.bot.sendMessage(
           this.chatId,
-          `Commands:\n/approve — send this draft\n/edit <new text> — replace draft and send\n/skip — skip this email\n/type <type> — redraft with different type`
+          `Commands:\n/approve — send this draft\n/edit <new text> — replace draft and send\n/skip — skip this email\n/type <type> — redraft with different type`,
         );
       }
     });
@@ -97,7 +97,7 @@ export class TelegramApproval {
     draftReply: string,
     suggestedType: ReplyType,
     current: number,
-    total: number
+    total: number,
   ): Promise<ApprovalAction> {
     return new Promise(async (resolve) => {
       this.pendingApproval = {
@@ -142,19 +142,17 @@ ${this.escape(draftReply)}
   async sendSummary(
     processed: number,
     approved: number,
-    skipped: number
+    skipped: number,
   ): Promise<void> {
     await this.bot.sendMessage(
       this.chatId,
       `✅ *Done!*\n\nProcessed: ${processed} emails\nReplied: ${approved}\nSkipped: ${skipped}`,
-      { parse_mode: "Markdown" }
+      { parse_mode: "Markdown" },
     );
   }
 
   private escape(text: string): string {
-    return text
-      .replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&")
-      .slice(0, 500);
+    return text.slice(0, 500);
   }
 
   stop(): void {

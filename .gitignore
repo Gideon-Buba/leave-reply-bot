@@ -1,0 +1,15 @@
+# Environment
+.env
+
+# Dependencies
+node_modules/
+node
+
+# Build output
+dist/
+
+# Package manager
+package-lock.json
+
+# Misc
+leave-reply-bot@1.0.0
