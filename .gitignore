@@ -13,3 +13,5 @@ package-lock.json
 
 # Misc
 leave-reply-bot@1.0.0
+tokens.json
+.env
