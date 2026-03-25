@@ -79,13 +79,13 @@ export class TelegramApproval {
         } else {
           await this.bot.sendMessage(
             this.chatId,
-            `⚠️ Valid types: approved, denied, more_info, acknowledgement`,
+            "⚠️ Valid types: approved, denied, more_info, acknowledgement",
           );
         }
       } else {
         await this.bot.sendMessage(
           this.chatId,
-          `Commands:\n/approve — send this draft\n/edit <new text> — replace draft and send\n/skip — skip this email\n/type <type> — redraft with different type`,
+          "Commands:\n/approve — send this draft\n/edit &lt;new text&gt; — replace draft and send\n/skip — skip this email\n/type &lt;type&gt; — redraft with different type",
         );
       }
     });
@@ -108,35 +108,41 @@ export class TelegramApproval {
         resolve,
       };
 
-      const message = `
-📧 *Email ${current}/${total}*
+      const typeEmoji: Record<ReplyType, string> = {
+        approved: "✅",
+        denied: "❌",
+        more_info: "❓",
+        acknowledgement: "📋",
+      };
 
-*From:* ${this.escape(email.sender)} (${this.escape(email.senderEmail)})
-*Subject:* ${this.escape(email.subject)}
-*Received:* ${this.escape(email.receivedAt)}
+      const message = [
+        `📧 <b>Email ${current}/${total}</b>`,
+        ``,
+        `<b>From:</b> ${this.esc(email.sender)} &lt;${this.esc(email.senderEmail)}&gt;`,
+        `<b>Subject:</b> ${this.esc(email.subject)}`,
+        `<b>Received:</b> ${this.esc(email.receivedAt)}`,
+        ``,
+        `<b>Message:</b>`,
+        `<i>${this.esc(email.body.slice(0, 400))}${email.body.length > 400 ? "..." : ""}</i>`,
+        ``,
+        `━━━━━━━━━━━━━━━━━`,
+        `${typeEmoji[suggestedType]} <b>Suggested reply (${suggestedType}):</b>`,
+        ``,
+        this.esc(draftReply),
+        `━━━━━━━━━━━━━━━━━`,
+        ``,
+        `/approve — send this`,
+        `/edit &lt;new text&gt; — replace &amp; send`,
+        `/skip — skip this email`,
+        `/type approved|denied|more_info|acknowledgement`,
+      ].join("\n");
 
-*Original message:*
-${this.escape(email.body.slice(0, 400))}${email.body.length > 400 ? "..." : ""}
-
-━━━━━━━━━━━━━━━━━
-🤖 *Suggested reply (${suggestedType}):*
-${this.escape(draftReply)}
-━━━━━━━━━━━━━━━━━
-
-/approve — send this
-/edit <new text> — replace & send
-/skip — skip this email
-/type <approved|denied|more\\_info|acknowledgement> — redraft
-      `.trim();
-
-      await this.bot.sendMessage(this.chatId, message, {
-        parse_mode: "Markdown",
-      });
+      await this.bot.sendMessage(this.chatId, message, { parse_mode: "HTML" });
     });
   }
 
   async sendMessage(text: string): Promise<void> {
-    await this.bot.sendMessage(this.chatId, text);
+    await this.bot.sendMessage(this.chatId, text, { parse_mode: "HTML" });
   }
 
   async sendSummary(
@@ -146,13 +152,17 @@ ${this.escape(draftReply)}
   ): Promise<void> {
     await this.bot.sendMessage(
       this.chatId,
-      `✅ *Done!*\n\nProcessed: ${processed} emails\nReplied: ${approved}\nSkipped: ${skipped}`,
-      { parse_mode: "Markdown" },
+      `✅ <b>Done!</b>\n\nProcessed: ${processed} emails\nReplied: ${approved}\nSkipped: ${skipped}`,
+      { parse_mode: "HTML" },
     );
   }
 
-  private escape(text: string): string {
-    return text.slice(0, 500);
+  private esc(text: string): string {
+    return text
+      .slice(0, 500)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
 
   stop(): void {
