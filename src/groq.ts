@@ -10,7 +10,7 @@ export interface EmailProcessResult {
   draft: string;
 }
 
-const SYSTEM_PROMPT = `You are a professional leave services officer at NRS (Nigerian government organization).
+const CLASSIFY_AND_DRAFT_PROMPT = `You are a professional leave services officer at NRS (Nigerian government organization).
 You classify and draft concise, formal, and polite email replies to staff leave requests.
 
 Your replies should:
@@ -29,10 +29,21 @@ Where "type" is one of: approved, denied, more_info, acknowledgement
 - more_info: missing key details (dates, leave type, duration)
 - acknowledgement: complex or unclear request that needs manual review`;
 
+const DRAFT_ONLY_PROMPT = `You are a professional leave services officer at NRS (Nigerian government organization).
+You draft concise, formal, and polite email replies to staff leave requests.
+
+Your replies should:
+- Be professional but warm
+- Address the sender by name if available
+- Be brief (3-5 sentences max)
+- Reference the specific leave type/dates mentioned if clear
+- End with a standard sign-off: "Regards,\nGideon Buba,\nOII, Leave Unit"
+
+Return ONLY the plain email reply body — no subject line, no JSON, no markdown, no extra commentary.`;
+
 const FALLBACK_REPLY =
   "Thank you for your leave request. It has been received and is currently being reviewed. We will get back to you shortly.\n\nRegards,\nGideon Buba,\nOII, Leave Unit";
 
-// Skip reply-chain emails to avoid processing duplicates
 export function shouldSkipEmail(email: Email): boolean {
   const subject = email.subject.toLowerCase();
   return (
@@ -43,7 +54,6 @@ export function shouldSkipEmail(email: Email): boolean {
 }
 
 export async function processEmail(email: Email): Promise<EmailProcessResult> {
-  // Truncate body to save tokens — leave emails are short anyway
   const truncatedBody = email.body.slice(0, 800);
 
   const prompt = `
@@ -58,7 +68,7 @@ Classify this leave request and draft an appropriate reply.
   const completion = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: CLASSIFY_AND_DRAFT_PROMPT },
       { role: "user", content: prompt },
     ],
     temperature: 0.3,
@@ -68,7 +78,6 @@ Classify this leave request and draft an appropriate reply.
   const raw = completion.choices[0]?.message?.content?.trim() || "";
 
   try {
-    // Strip any accidental markdown code fences
     const clean = raw.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(clean);
 
@@ -85,13 +94,11 @@ Classify this leave request and draft an appropriate reply.
 
     return { replyType, draft };
   } catch {
-    // If JSON parsing fails, return a safe fallback
     console.error("Failed to parse LLM response:", raw);
     return { replyType: "acknowledgement", draft: FALLBACK_REPLY };
   }
 }
 
-// Keep these for backward compatibility with telegram.ts if it uses them
 export async function draftReply(
   email: Email,
   replyType: ReplyType,
@@ -114,13 +121,12 @@ Email body:
 ${email.body.slice(0, 800)}
 
 Task: ${replyInstructions[replyType]}
-Return ONLY the email reply body — no subject line, no extra commentary.
-  `.trim();
+`.trim();
 
   const completion = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: DRAFT_ONLY_PROMPT },
       { role: "user", content: prompt },
     ],
     temperature: 0.3,
