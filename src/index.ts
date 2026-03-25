@@ -2,17 +2,16 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import { OutlookGraph } from "./graph";
-import { draftReply, classifyEmail } from "./groq";
+import { processEmail, draftReply, shouldSkipEmail } from "./groq";
 import { TelegramApproval } from "./telegram";
 
 const {
-  GROQ_API_KEY,
   TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID,
-  AZURE_CLIENT_ID,
-  AZURE_TENANT_ID,
   POLL_INTERVAL_MS = "300000",
 } = process.env;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function assertEnv(): void {
   const required = [
@@ -32,7 +31,12 @@ async function processEmails(
   telegram: TelegramApproval,
   isFirstRun: boolean,
 ): Promise<void> {
-  const emails = await outlook.getUnreadEmails();
+  const allEmails = await outlook.getUnreadEmails();
+
+  // Filter out reply-chain emails
+  const emails = allEmails.filter((e) => !shouldSkipEmail(e));
+  const skippedThreads = allEmails.length - emails.length;
+
   if (emails.length === 0) {
     console.log("📭 No unread emails found");
     if (isFirstRun)
@@ -41,16 +45,24 @@ async function processEmails(
       );
     return;
   }
+
+  const threadNote =
+    skippedThreads > 0 ? ` (${skippedThreads} reply threads skipped)` : "";
   await telegram.sendMessage(
-    `📬 Found *${emails.length}* unread email${emails.length > 1 ? "s" : ""}. Starting now...`,
+    `📬 Found *${emails.length}* new email${emails.length > 1 ? "s" : ""}${threadNote}. Starting now...`,
   );
+
   let approved = 0,
     skipped = 0;
+
   for (let i = 0; i < emails.length; i++) {
     const email = emails[i];
     try {
-      const suggestedType = await classifyEmail(email);
-      let draft = await draftReply(email, suggestedType);
+      // Single API call — classify + draft together
+      const { replyType: suggestedType, draft: initialDraft } =
+        await processEmail(email);
+      let draft = initialDraft;
+
       let action = await telegram.sendForApproval(
         email,
         i,
@@ -59,6 +71,7 @@ async function processEmails(
         i + 1,
         emails.length,
       );
+
       if (action.type === "change_type") {
         await telegram.sendMessage(`🔄 Redrafting as *${action.replyType}*...`);
         draft = await draftReply(email, action.replyType);
@@ -71,13 +84,16 @@ async function processEmails(
           emails.length,
         );
       }
+
       if (action.type === "skip") {
         skipped++;
         await telegram.sendMessage(`⏭️ Skipped.`);
         continue;
       }
+
       const replyText = action.type === "edit" ? action.newText : draft;
       const sent = await outlook.replyToEmail(email.id, replyText);
+
       if (sent) {
         approved++;
         await telegram.sendMessage(
@@ -89,15 +105,19 @@ async function processEmails(
         );
         skipped++;
       }
-      await new Promise((r) => setTimeout(r, 1000));
+
+      // Delay between emails to stay within rate limits
+      await sleep(4000);
     } catch (err) {
       console.error(`Error on email ${i}:`, err);
       await telegram.sendMessage(
         `❌ Error on email ${i + 1}: "${email.subject}". Skipping.`,
       );
       skipped++;
+      await sleep(4000);
     }
   }
+
   await telegram.sendSummary(emails.length, approved, skipped);
 }
 
@@ -115,6 +135,7 @@ async function main(): Promise<void> {
   console.log(
     `\n⏰ Polling every ${Number(POLL_INTERVAL_MS) / 60000} minutes...`,
   );
+
   setInterval(async () => {
     try {
       await outlook.login();
