@@ -18,7 +18,11 @@ Your replies should:
 - Address the sender by name if available
 - Be brief (3-5 sentences max)
 - Reference the specific leave type/dates mentioned if clear
-- End with a standard sign-off: "Regards,\nGideon Buba,\nOII, Leave Unit"
+- End with this exact sign-off on its own line:
+
+Regards,
+Gideon Buba,
+Employee Service Delivery
 
 Return ONLY a JSON object in this exact format, no extra text, no markdown:
 {"type":"acknowledgement","reply":"Your reply here"}
@@ -37,12 +41,16 @@ Your replies should:
 - Address the sender by name if available
 - Be brief (3-5 sentences max)
 - Reference the specific leave type/dates mentioned if clear
-- End with a standard sign-off: "Regards,\nGideon Buba,\nOII, Leave Unit"
+- End with this exact sign-off on its own line:
+
+Regards,
+Gideon Buba,
+Employee Service Delivery
 
 Return ONLY the plain email reply body — no subject line, no JSON, no markdown, no extra commentary.`;
 
 const FALLBACK_REPLY =
-  "Thank you for your leave request. It has been received and is currently being reviewed. We will get back to you shortly.\n\nRegards,\nGideon Buba,\nOII, Leave Unit";
+  "Thank you for your leave request. It has been received and is currently being reviewed. We will get back to you shortly.\n\nRegards,\nGideon Buba,\nEmployee Service Delivery";
 
 export function shouldSkipEmail(email: Email): boolean {
   const subject = email.subject.toLowerCase();
