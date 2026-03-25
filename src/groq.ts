@@ -3,7 +3,7 @@ import { Email } from "./outlook";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
+  model: "gemini-1.5-flash-8b",
   systemInstruction: `You are a professional leave services officer at NRS (Nigerian government organization). 
 You draft concise, formal, and polite email replies to staff leave requests.
 
@@ -52,7 +52,7 @@ Task: ${replyInstructions[replyType]}
 }
 
 const classifierModel = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
+  model: "gemini-1.5-flash-8b",
 });
 
 export async function classifyEmail(email: Email): Promise<ReplyType> {
