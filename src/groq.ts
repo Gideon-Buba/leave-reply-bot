@@ -1,9 +1,10 @@
-import Groq from "groq-sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Email } from "./outlook";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const SYSTEM_PROMPT = `You are a professional leave services officer at NRS (Nigerian government organization). 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash",
+  systemInstruction: `You are a professional leave services officer at NRS (Nigerian government organization). 
 You draft concise, formal, and polite email replies to staff leave requests.
 
 Your replies should:
@@ -14,7 +15,8 @@ Your replies should:
 - End with a standard sign-off: "Regards,\nGideon Buba,\nOII, Leave Unit"
 
 You will be given the email content and the type of response needed.
-Return ONLY the email reply body — no subject line, no extra commentary.`;
+Return ONLY the email reply body — no subject line, no extra commentary.`,
+});
 
 export type ReplyType = "approved" | "denied" | "more_info" | "acknowledgement";
 
@@ -42,21 +44,16 @@ ${email.body}
 Task: ${replyInstructions[replyType]}
   `.trim();
 
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: prompt },
-    ],
-    temperature: 0.4,
-    max_tokens: 300,
-  });
-
+  const result = await model.generateContent(prompt);
   return (
-    completion.choices[0]?.message?.content?.trim() ||
-    "Thank you for your leave request. We will get back to you shortly.\n\nRegards,\nLeave Services Unit"
+    result.response.text().trim() ||
+    "Thank you for your leave request. We will get back to you shortly.\n\nRegards,\nGideon Buba,\nOII, Leave Unit"
   );
 }
+
+const classifierModel = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash",
+});
 
 export async function classifyEmail(email: Email): Promise<ReplyType> {
   const prompt = `
@@ -72,21 +69,16 @@ Email body: ${email.body.slice(0, 500)}
 Reply with ONLY one of these exact words: approved, denied, more_info, acknowledgement
   `.trim();
 
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0,
-    max_tokens: 10,
-  });
+  const result = await classifierModel.generateContent(prompt);
+  const text = result.response.text().trim().toLowerCase();
 
-  const result = completion.choices[0]?.message?.content?.trim().toLowerCase();
   const validTypes: ReplyType[] = [
     "approved",
     "denied",
     "more_info",
     "acknowledgement",
   ];
-  return validTypes.includes(result as ReplyType)
-    ? (result as ReplyType)
+  return validTypes.includes(text as ReplyType)
+    ? (text as ReplyType)
     : "acknowledgement";
 }
