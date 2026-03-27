@@ -10,44 +10,17 @@ export interface EmailProcessResult {
   draft: string;
 }
 
-const CLASSIFY_AND_DRAFT_PROMPT = `You are a professional leave services officer at NRS (Nigerian government organization).
-You classify and draft concise, formal, and polite email replies to staff leave requests.
+const CLASSIFY_AND_DRAFT_PROMPT = `You are a leave services officer at NRS. Classify and draft a brief, formal reply to a staff leave request.
 
-Your replies should:
-- Be professional but warm
-- Address the sender by name if available
-- Be brief (3-5 sentences max)
-- Reference the specific leave type/dates mentioned if clear
-- End with this exact sign-off on its own line:
-
+Reply rules: address sender by name, 3-5 sentences, end with:
 Regards,
 Gideon Buba,
 Employee Service Delivery
 
-Return ONLY a JSON object in this exact format, no extra text, no markdown:
+Return ONLY this JSON (no markdown):
 {"type":"acknowledgement","reply":"Your reply here"}
 
-Where "type" is one of: approved, denied, more_info, acknowledgement
-- approved: straightforward leave request, safe to approve
-- denied: problematic request (excessive duration, bad timing, incomplete forms)
-- more_info: missing key details (dates, leave type, duration)
-- acknowledgement: complex or unclear request that needs manual review`;
-
-const DRAFT_ONLY_PROMPT = `You are a professional leave services officer at NRS (Nigerian government organization).
-You draft concise, formal, and polite email replies to staff leave requests.
-
-Your replies should:
-- Be professional but warm
-- Address the sender by name if available
-- Be brief (3-5 sentences max)
-- Reference the specific leave type/dates mentioned if clear
-- End with this exact sign-off on its own line:
-
-Regards,
-Gideon Buba,
-Employee Service Delivery
-
-Return ONLY the plain email reply body — no subject line, no JSON, no markdown, no extra commentary.`;
+Types: approved (clear request), denied (excessive/bad timing/incomplete), more_info (missing dates/type/duration), acknowledgement (needs manual review)`;
 
 const FALLBACK_REPLY =
   "Thank you for your leave request. It has been received and is currently being reviewed. We will get back to you shortly.\n\nRegards,\nGideon Buba,\nEmployee Service Delivery";
@@ -74,7 +47,7 @@ Classify this leave request and draft an appropriate reply.
 `.trim();
 
   const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
+    model: "llama-3.1-8b-instant",
     messages: [
       { role: "system", content: CLASSIFY_AND_DRAFT_PROMPT },
       { role: "user", content: prompt },
@@ -107,41 +80,17 @@ Classify this leave request and draft an appropriate reply.
   }
 }
 
-export async function draftReply(
-  email: Email,
-  replyType: ReplyType,
-): Promise<string> {
-  const replyInstructions: Record<ReplyType, string> = {
-    approved:
-      "Draft an approval reply confirming their leave request has been approved.",
-    denied:
-      "Draft a polite denial reply explaining their leave request cannot be approved at this time.",
-    more_info:
-      "Draft a reply requesting more information or clarification about their leave request.",
-    acknowledgement:
-      "Draft an acknowledgement reply confirming their request has been received and is being reviewed.",
+const SIGN_OFF = "\n\nRegards,\nGideon Buba,\nEmployee Service Delivery";
+
+export function draftReply(email: Email, replyType: ReplyType): string {
+  const name = email.sender?.split(" ")[0] || "Sir/Ma";
+  const templates: Record<ReplyType, string> = {
+    approved: `Dear ${name},\n\nThank you for your leave request. After review, your request has been approved. Please ensure a proper handover before your leave commences.${SIGN_OFF}`,
+    denied: `Dear ${name},\n\nThank you for your leave request. Unfortunately, we are unable to approve your request at this time. Please feel free to reapply at a more suitable period.${SIGN_OFF}`,
+    more_info: `Dear ${name},\n\nThank you for reaching out. To process your leave request, we require additional details such as the leave type, start date, end date, and duration. Kindly provide these at your earliest convenience.${SIGN_OFF}`,
+    acknowledgement: `Dear ${name},\n\nThank you for your leave request. It has been received and is currently under review. We will revert to you as soon as possible.${SIGN_OFF}`,
   };
-
-  const prompt = `
-Sender: ${email.sender} (${email.senderEmail})
-Subject: ${email.subject}
-Email body:
-${email.body.slice(0, 800)}
-
-Task: ${replyInstructions[replyType]}
-`.trim();
-
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [
-      { role: "system", content: DRAFT_ONLY_PROMPT },
-      { role: "user", content: prompt },
-    ],
-    temperature: 0.3,
-    max_tokens: 400,
-  });
-
-  return completion.choices[0]?.message?.content?.trim() || FALLBACK_REPLY;
+  return templates[replyType] || FALLBACK_REPLY;
 }
 
 export async function classifyEmail(email: Email): Promise<ReplyType> {
