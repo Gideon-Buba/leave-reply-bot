@@ -74,7 +74,7 @@ async function processEmails(
 
       if (action.type === "change_type") {
         await telegram.sendMessage(`🔄 Redrafting as *${action.replyType}*...`);
-        draft = await draftReply(email, action.replyType);
+        draft = draftReply(email, action.replyType);
         action = await telegram.sendForApproval(
           email,
           i,
