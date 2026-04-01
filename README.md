@@ -4,8 +4,8 @@ Automates replying to leave request emails via Outlook web + Telegram approval.
 
 ## How it works
 
-1. Logs into Outlook as `Gideon.Buba@nrs.gov.ng`
-2. Opens the `leaveservices@nrs.gov.ng` shared mailbox
+1. Logs into Outlook as your configured work email
+2. Opens the configured shared mailbox
 3. Fetches all unread emails
 4. Groq AI classifies each email and drafts a reply
 5. Sends draft to your Telegram for approval
@@ -35,10 +35,10 @@ nano .env
 ```
 
 Fill in:
-- `OUTLOOK_EMAIL` — your work email (Gideon.Buba@nrs.gov.ng)
+- `OUTLOOK_EMAIL` — your work email
 - `OUTLOOK_PASSWORD` — your Outlook password
-- `SHARED_MAILBOX` — leaveservices@nrs.gov.ng
-- `GROQ_API_KEY` — from your Groq account (same as YouTube pipeline)
+- `SHARED_MAILBOX` — the shared mailbox to monitor
+- `GROQ_API_KEY` — from your Groq account
 - `TELEGRAM_BOT_TOKEN` — your Telegram bot token
 - `TELEGRAM_CHAT_ID` — your personal Telegram chat ID
 
@@ -80,4 +80,4 @@ pm2 startup
 - Session is saved to `session.json` after first login — subsequent runs won't ask for password again
 - Delete `session.json` if you need to force a fresh login
 - Playwright runs headless (no visible browser window)
-- Groq free tier is more than enough for 115+ emails
+- Monitor your Groq token usage to avoid hitting daily limits
